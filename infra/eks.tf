@@ -14,7 +14,7 @@ module "eks" {
 
   # Cluster access entry
   manage_aws_auth_configmap = true
-  
+
   aws_auth_users = [
     {
       userarn  = var.admin_arn
