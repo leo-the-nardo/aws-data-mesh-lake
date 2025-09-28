@@ -1,0 +1,27 @@
+# AWS Configuration
+aws_region = "us-west-2"
+
+# VPC Configuration
+vpc_name = "my-vpc"
+private_subnet_names = ["private-subnet-1", "private-subnet-2", "private-subnet-3"]
+public_subnet_names  = ["public-subnet-1", "public-subnet-2", "public-subnet-3"]
+
+# EKS Configuration
+cluster_name      = "my-eks-cluster"
+kubernetes_version = "1.28"
+
+# MSK Configuration
+msk_cluster_name = "my-msk-cluster"
+kafka_version    = "3.7.0"
+msk_instance_type = "kafka.t3.small"
+msk_storage_size  = 50
+
+# Admin group ARN for EKS access (replace with your actual ARN)
+admin_group_arn = "arn:aws:iam::123456789012:group/your-group-name"
+
+# Tags
+tags = {
+  Environment = "dev"
+  Project     = "producer-account"
+  Owner       = "your-team"
+}
