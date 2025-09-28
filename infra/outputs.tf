@@ -1,31 +1,31 @@
 output "eks_cluster_id" {
   description = "EKS cluster ID"
-  value       = aws_eks_cluster.main.id
+  value       = module.eks.cluster_id
 }
 
 output "eks_cluster_arn" {
   description = "EKS cluster ARN"
-  value       = aws_eks_cluster.main.arn
+  value       = module.eks.cluster_arn
 }
 
 output "eks_cluster_endpoint" {
   description = "EKS cluster endpoint"
-  value       = aws_eks_cluster.main.endpoint
+  value       = module.eks.cluster_endpoint
 }
 
 output "eks_cluster_name" {
   description = "EKS cluster name"
-  value       = aws_eks_cluster.main.name
+  value       = module.eks.cluster_name
 }
 
 output "eks_cluster_certificate_authority_data" {
   description = "EKS cluster certificate authority data"
-  value       = aws_eks_cluster.main.certificate_authority[0].data
+  value       = module.eks.cluster_certificate_authority_data
 }
 
 output "kubectl_config_command" {
   description = "Command to configure kubectl"
-  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${aws_eks_cluster.main.name}"
+  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
 }
 
 output "msk_cluster_arn" {

@@ -1,120 +1,60 @@
-# EKS Cluster with auto mode
-resource "aws_eks_cluster" "main" {
-  name     = var.cluster_name
-  role_arn = aws_iam_role.eks_cluster.arn
-  version  = var.kubernetes_version
-  upgrade_policy {
-    support_type = "STANDARD"
-  }
-  vpc_config {
-    subnet_ids              = data.aws_subnets.private.ids
-    endpoint_private_access = true
-    endpoint_public_access  = true
-    security_group_ids      = [aws_security_group.eks_cluster.id]
-  }
+# EKS Cluster using terraform-aws-modules/eks/aws
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.21.0"
 
-  # Enable EKS access entries for kubectl access
-  access_config {
-    authentication_mode = "API_AND_CONFIG_MAP"
-  }
+  cluster_name    = var.cluster_name
+  cluster_version = var.kubernetes_version
 
-  depends_on = [
-    aws_iam_role_policy_attachment.eks_cluster_policy,
-    aws_iam_role_policy_attachment.eks_vpc_resource_controller,
+  vpc_id     = data.aws_vpc.existing.id
+  subnet_ids = data.aws_subnets.private.ids
+
+  cluster_endpoint_private_access = true
+  cluster_endpoint_public_access  = true
+
+  # Cluster access entry
+  manage_aws_auth_configmap = true
+  
+  aws_auth_users = [
+    {
+      userarn  = var.admin_arn
+      username = "admin"
+      groups   = ["system:masters"]
+    }
   ]
 
-  tags = var.tags
-}
-
-# EKS Cluster IAM Role
-resource "aws_iam_role" "eks_cluster" {
-  name = "${var.cluster_name}-cluster-role"
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "eks.amazonaws.com"
-      }
-    }]
-    Version = "2012-10-17"
-  })
-
-  tags = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.eks_cluster.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
-  role       = aws_iam_role.eks_cluster.name
-}
-
-# EKS Access Entry for kubectl access
-resource "aws_eks_access_entry" "admin" {
-  cluster_name      = aws_eks_cluster.main.name
-  principal_arn     = var.admin_arn
-  type              = "STANDARD"
-
-  depends_on = [aws_eks_cluster.main]
-}
-
-# EKS Access Policy Association for admin access
-resource "aws_eks_access_policy_association" "admin" {
-  cluster_name  = aws_eks_cluster.main.name
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = var.admin_arn
-
-  access_scope {
-    type = "cluster"
+  # Fargate profiles
+  fargate_profiles = {
+    main = {
+      name = "main"
+      selectors = [
+        {
+          namespace = "*"
+        }
+      ]
+    }
   }
 
-  depends_on = [aws_eks_access_entry.admin]
-}
-
-# Fargate Pod Execution Role
-resource "aws_iam_role" "fargate_pod_execution" {
-  name = "${var.cluster_name}-fargate-pod-execution-role"
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = {
-        Service = "eks-fargate-pods.amazonaws.com"
-      }
-    }]
-    Version = "2012-10-17"
-  })
-
-  tags = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "fargate_pod_execution" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"
-  role       = aws_iam_role.fargate_pod_execution.name
-}
-
-# Fargate Profile
-resource "aws_eks_fargate_profile" "main" {
-  cluster_name           = aws_eks_cluster.main.name
-  fargate_profile_name   = "main"
-  pod_execution_role_arn = aws_iam_role.fargate_pod_execution.arn
-  subnet_ids             = data.aws_subnets.private.ids
-
-  selector {
-    namespace = "*"
+  # Cluster security group
+  cluster_security_group_additional_rules = {
+    ingress_from_vpc = {
+      description = "Allow all inbound traffic from within the VPC"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      cidr_blocks = [data.aws_vpc.existing.cidr_block]
+    }
+    ingress_https = {
+      description = "Allow HTTPS from anywhere (for EKS API)"
+      protocol    = "tcp"
+      from_port   = 443
+      to_port     = 443
+      type        = "ingress"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
-
+  # Tags
   tags = var.tags
-
-  depends_on = [
-    aws_eks_cluster.main,
-    aws_iam_role.fargate_pod_execution
-  ]
 }

@@ -1,20 +1,4 @@
-# Security Group for EKS Cluster
-resource "aws_security_group" "eks_cluster" {
-  name_prefix = "${var.cluster_name}-cluster-"
-  vpc_id      = data.aws_vpc.existing.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-
-  tags = merge(var.tags, {
-    Name = "${var.cluster_name}-cluster-sg"
-  })
-}
+# Security Group for EKS Cluster is now managed by the EKS module
 
 # Security Group for MSK
 resource "aws_security_group" "msk" {
