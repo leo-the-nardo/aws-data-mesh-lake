@@ -59,7 +59,6 @@ resource "aws_eks_access_entry" "admin" {
   cluster_name      = aws_eks_cluster.main.name
   principal_arn     = var.admin_arn
   type              = "STANDARD"
-  kubernetes_groups = ["system:masters"]
 
   depends_on = [aws_eks_cluster.main]
 }
@@ -68,7 +67,7 @@ resource "aws_eks_access_entry" "admin" {
 resource "aws_eks_access_policy_association" "admin" {
   cluster_name  = aws_eks_cluster.main.name
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = var.admin_group_arn
+  principal_arn = var.admin_arn
 
   access_scope {
     type = "cluster"
@@ -109,14 +108,6 @@ resource "aws_eks_fargate_profile" "main" {
 
   selector {
     namespace = "*"
-  }
-
-  selector {
-    namespace = "kube-system"
-  }
-
-  selector {
-    namespace = "velero"
   }
 
 
