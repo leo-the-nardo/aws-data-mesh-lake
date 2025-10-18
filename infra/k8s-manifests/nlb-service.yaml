@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nlb-svc-simulacaoconvivencia
+  annotations:
+    # AWS Load Balancer Controller annotations
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    # Health check configuration for IP targets
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "HTTP"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "8080"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "10"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "5"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
+    # Preserve source IP for API Gateway
+    service.beta.kubernetes.io/aws-load-balancer-preserve-source-ip: "true"
+    # Explicitly specify private subnets for internal load balancer
+    # This ensures the NLB is created in private subnets (internal)
+    service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-019e92846ac9f0248,subnet-0fbb094960da917dd,subnet-02c7e1b91c1d793cf"
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    # Tags for Terraform discovery
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "Environment=dev,Project=data-eng-aws,Name=nlb-svc-simulacaoconvivencia"
+spec:
+  type: LoadBalancer
+  ports:
+    # HTTPS port for API Gateway integration
+    - port: 443
+      targetPort: 8080
+      protocol: TCP
+      name: https
+  selector:
+    app: nlb-app
+  # Optional: External traffic policy
+  externalTrafficPolicy: Cluster

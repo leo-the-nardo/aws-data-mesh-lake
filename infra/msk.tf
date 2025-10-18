@@ -1,13 +1,14 @@
 # MSK Cluster
 resource "aws_msk_cluster" "main" {
+  count                 = var.enable_msk ? 1 : 0
   cluster_name           = var.msk_cluster_name
   kafka_version          = var.kafka_version
-  number_of_broker_nodes = length(data.aws_subnets.private.ids)
+  number_of_broker_nodes = length(module.vpc.private_subnets)
 
   broker_node_group_info {
     instance_type   = var.msk_instance_type
-    client_subnets  = data.aws_subnets.private.ids
-    security_groups = [aws_security_group.msk.id]
+    client_subnets  = module.vpc.private_subnets
+    security_groups = [aws_security_group.msk[0].id]
 
     storage_info {
       ebs_storage_info {
@@ -17,8 +18,8 @@ resource "aws_msk_cluster" "main" {
   }
 
   configuration_info {
-    arn      = aws_msk_configuration.main.arn
-    revision = aws_msk_configuration.main.latest_revision
+    arn      = aws_msk_configuration.main[0].arn
+    revision = aws_msk_configuration.main[0].latest_revision
   }
 
   tags = var.tags
@@ -26,6 +27,7 @@ resource "aws_msk_cluster" "main" {
 
 # MSK Configuration
 resource "aws_msk_configuration" "main" {
+  count          = var.enable_msk ? 1 : 0
   kafka_versions = [var.kafka_version]
   name           = "${var.msk_cluster_name}-config"
 

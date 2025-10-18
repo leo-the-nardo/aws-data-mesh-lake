@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nlb-app
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nlb-app
+  template:
+    metadata:
+      labels:
+        app: nlb-app
+    spec:
+      # Fargate-compatible pod spec (no node selectors or tolerations)
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        command: ["/bin/sh"]
+        args: ["-c", "echo 'server { listen 8080; location / { return 200 \"NLB Service is running!\"; add_header Content-Type text/plain; } }' > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        startupProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
