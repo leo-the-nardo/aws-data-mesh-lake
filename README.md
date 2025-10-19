@@ -34,13 +34,19 @@ terraform output github_actions_role_arn  # Copy to GitHub Secrets as AWS_ROLE_A
 # Terraform version: 1.9.8 (change in reusable-terraform.yml line 21)
 ```
 
-**Destroy infrastructure**: Create `.destroy` file in infra directory, then push:
+**Destroy infrastructure**: Create `.destroy` file in infra directory:
 ```bash
 touch infra-glue/.destroy
 git add infra-glue/.destroy
 git commit -m "destroy: mark glue for destruction"
 git push  # Triggers plan destroy → approval → destroy
-# After destroy, .destroy file is auto-removed and next run will recreate
+```
+
+**Recreate infrastructure**: Remove `.destroy` file:
+```bash
+git rm infra-glue/.destroy
+git commit -m "deploy: recreate glue infrastructure"
+git push  # Triggers plan apply → approval → apply
 ```
 
 ### EKS Access

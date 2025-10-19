@@ -114,14 +114,6 @@ jobs:
           fi
         working-directory: ${{ inputs.terraform_directory }}
 
-      - name: Upload Plan
-        if: steps.plan.outputs.has-changes == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ inputs.environment }}-${{ inputs.terraform_directory }}
-          path: ${{ inputs.terraform_directory }}/tfplan
-          retention-days: 5
-
   # This job waits for approval if environment has protection rules
   approval-gate:
     name: ${{ needs.terraform-plan.outputs.is-destroy == 'true' && 'Approval (DESTROY)' || 'Approval' }}
@@ -168,11 +160,14 @@ jobs:
         run: terraform init
         working-directory: ${{ inputs.terraform_directory }}
 
-      - name: Download Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-${{ inputs.environment }}-${{ inputs.terraform_directory }}
-          path: ${{ inputs.terraform_directory }}/
+      - name: Terraform Plan (for apply)
+        run: |
+          if [ "${{ needs.terraform-plan.outputs.is-destroy }}" = "true" ]; then
+            terraform plan -destroy -var-file="variables/dev.tfvars" -out=tfplan
+          else
+            terraform plan -var-file="variables/dev.tfvars" -out=tfplan
+          fi
+        working-directory: ${{ inputs.terraform_directory }}
 
       - name: Terraform Apply/Destroy
         run: |
@@ -185,18 +180,14 @@ jobs:
           fi
         working-directory: ${{ inputs.terraform_directory }}
 
-      - name: Remove .destroy file after destroy
-        if: needs.terraform-plan.outputs.is-destroy == 'true'
-        run: |
-          rm -f "${{ inputs.terraform_directory }}/.destroy"
-          echo "✅ Removed .destroy file. Infrastructure will be recreated on next run."
-
       - name: Summary
         run: |
           if [ "${{ needs.terraform-plan.outputs.is-destroy }}" = "true" ]; then
             echo "### 🔴 Destroy Successful" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "- **Action**: DESTROY" >> $GITHUB_STEP_SUMMARY
+            echo "- ⚠️  **.destroy file still present** - infrastructure will NOT be recreated" >> $GITHUB_STEP_SUMMARY
+            echo "- To recreate: Remove .destroy file and push" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
