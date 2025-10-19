@@ -46,24 +46,8 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: |
-          terraform plan -no-color -var-file="variables/dev.tfvars" -out=tfplan
-          terraform show -no-color tfplan > tfplan.txt
+        run: terraform plan -no-color -var-file="variables/dev.tfvars"
         working-directory: ./${{ matrix.infra-dir }}
-
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-${{ matrix.infra-dir }}
-          path: ./${{ matrix.infra-dir }}/tfplan
-          retention-days: 5
-
-      - name: Upload Plan Output
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-output-${{ matrix.infra-dir }}
-          path: ./${{ matrix.infra-dir }}/tfplan.txt
-          retention-days: 5
 
   manual-approval:
     name: Manual Approval
@@ -129,19 +113,13 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: Download Plan Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-plan-${{ matrix.infra-dir }}
-          path: ./${{ matrix.infra-dir }}
-
       - name: Terraform Init
         run: terraform init
         working-directory: ./${{ matrix.infra-dir }}
 
       - name: Terraform Apply
         id: apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve -var-file="variables/dev.tfvars"
         working-directory: ./${{ matrix.infra-dir }}
 
       - name: Output Terraform Results
