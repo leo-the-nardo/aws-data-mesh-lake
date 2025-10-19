@@ -82,13 +82,13 @@ jobs:
             echo "Planning DESTROY..."
             terraform plan \
               -destroy \
-              -var-file="variables/${{ inputs.environment }}.tfvars" \
+              -var-file="variables/dev.tfvars" \
               -out=tfplan \
               -detailed-exitcode
           else
             echo "Planning APPLY..."
             terraform plan \
-              -var-file="variables/${{ inputs.environment }}.tfvars" \
+              -var-file="variables/dev.tfvars" \
               -out=tfplan \
               -detailed-exitcode
           fi
@@ -116,9 +116,11 @@ jobs:
           path: ${{ inputs.terraform_directory }}/tfplan
           retention-days: 5
 
-  # This job only runs if there are changes and environment protection is configured
+  # This job waits for approval if environment has protection rules
+  # For 'dev' without protection rules, this runs immediately (no approval needed)
+  # For 'production' with protection rules, this waits for manual approval
   approval-gate:
-    name: ${{ needs.terraform-plan.outputs.is-destroy == 'true' && 'Approval Required (DESTROY)' || 'Approval Required' }}
+    name: ${{ needs.terraform-plan.outputs.is-destroy == 'true' && 'Approval (DESTROY)' || 'Approval' }}
     runs-on: ubuntu-latest
     needs: terraform-plan
     if: needs.terraform-plan.outputs.has-changes == 'true'
@@ -126,12 +128,15 @@ jobs:
       name: ${{ inputs.environment }}
     
     steps:
-      - name: Approval Received
+      - name: Approval Checkpoint
         run: |
           ACTION="${{ needs.terraform-plan.outputs.is-destroy == 'true' && '🔴 DESTROY' || '✅ APPLY' }}"
           echo "$ACTION approved for ${{ inputs.environment }}"
           echo "📁 Directory: ${{ inputs.terraform_directory }}"
           echo "👤 Approved by: ${{ github.actor }}"
+          echo ""
+          echo "ℹ️  If this ran immediately, the environment has no protection rules."
+          echo "ℹ️  Add required reviewers in: Settings → Environments → ${{ inputs.environment }}"
 
   terraform-apply:
     name: ${{ needs.terraform-plan.outputs.is-destroy == 'true' && 'Terraform Destroy' || 'Terraform Apply' }} (${{ inputs.terraform_directory }})

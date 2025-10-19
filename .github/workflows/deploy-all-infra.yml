@@ -11,9 +11,7 @@ on:
         required: true
         type: choice
         options:
-          - dev
-          - staging
-          - production
+          - development
       components:
         description: 'Components to deploy (comma-separated: network,glue,eks or "all")'
         required: true
@@ -42,7 +40,7 @@ jobs:
     uses: ./.github/workflows/reusable-terraform.yml
     with:
       terraform_directory: infra-network
-      environment: ${{ inputs.environment || 'dev' }}
+      environment: ${{ inputs.environment || 'development' }}
       terraform_version: ${{ inputs.terraform_version }}
     secrets:
       aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
@@ -59,7 +57,7 @@ jobs:
     uses: ./.github/workflows/reusable-terraform.yml
     with:
       terraform_directory: infra-glue
-      environment: ${{ inputs.environment || 'dev' }}
+      environment: ${{ inputs.environment || 'development' }}
       terraform_version: ${{ inputs.terraform_version }}
     secrets:
       aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
@@ -76,7 +74,7 @@ jobs:
     uses: ./.github/workflows/reusable-terraform.yml
     with:
       terraform_directory: infra-eks
-      environment: ${{ inputs.environment || 'dev' }}
+      environment: ${{ inputs.environment || 'development' }}
       terraform_version: ${{ inputs.terraform_version }}
     secrets:
       aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
@@ -93,7 +91,7 @@ jobs:
         run: |
           echo "# 🚀 Infrastructure Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment**: ${{ inputs.environment || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ inputs.environment || 'development' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Components**: ${{ inputs.components || 'all' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Actor**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
