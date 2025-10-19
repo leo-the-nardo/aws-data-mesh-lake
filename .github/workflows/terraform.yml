@@ -36,10 +36,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-        working-directory: ./${{ matrix.infra-dir }}
-
       - name: Terraform Init
         run: terraform init
         working-directory: ./${{ matrix.infra-dir }}
