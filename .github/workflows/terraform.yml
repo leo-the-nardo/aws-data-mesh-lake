@@ -43,10 +43,21 @@ jobs:
       - name: Check if directory has changes
         id: check-changes
         run: |
-          if git diff --name-only HEAD~1 HEAD | grep -q "^${{ matrix.infra-dir }}/"; then
-            echo "has-changes=true" >> $GITHUB_OUTPUT
+          # Use GitHub event data for proper change detection
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # First push to branch - check all files in the directory
+            if git ls-tree --name-only ${{ github.sha }} | grep -q "^${{ matrix.infra-dir }}/"; then
+              echo "has-changes=true" >> $GITHUB_OUTPUT
+            else
+              echo "has-changes=false" >> $GITHUB_OUTPUT
+            fi
           else
-            echo "has-changes=false" >> $GITHUB_OUTPUT
+            # Regular push - compare with previous commit
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^${{ matrix.infra-dir }}/"; then
+              echo "has-changes=true" >> $GITHUB_OUTPUT
+            else
+              echo "has-changes=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Terraform Format Check
@@ -97,8 +108,17 @@ jobs:
         run: |
           changed_dirs=""
           for dir in infra-eks infra-glue infra-network infra-state-resources; do
-            if git diff --name-only HEAD~1 HEAD | grep -q "^$dir/"; then
-              changed_dirs="$changed_dirs $dir"
+            # Use GitHub event data for proper change detection
+            if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+              # First push to branch - check all files in the directory
+              if git ls-tree --name-only ${{ github.sha }} | grep -q "^$dir/"; then
+                changed_dirs="$changed_dirs $dir"
+              fi
+            else
+              # Regular push - compare with previous commit
+              if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^$dir/"; then
+                changed_dirs="$changed_dirs $dir"
+              fi
             fi
           done
           echo "directories=$changed_dirs" >> $GITHUB_OUTPUT
@@ -153,10 +173,21 @@ jobs:
       - name: Check if directory has changes
         id: check-changes
         run: |
-          if git diff --name-only HEAD~1 HEAD | grep -q "^${{ matrix.infra-dir }}/"; then
-            echo "has-changes=true" >> $GITHUB_OUTPUT
+          # Use GitHub event data for proper change detection
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # First push to branch - check all files in the directory
+            if git ls-tree --name-only ${{ github.sha }} | grep -q "^${{ matrix.infra-dir }}/"; then
+              echo "has-changes=true" >> $GITHUB_OUTPUT
+            else
+              echo "has-changes=false" >> $GITHUB_OUTPUT
+            fi
           else
-            echo "has-changes=false" >> $GITHUB_OUTPUT
+            # Regular push - compare with previous commit
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "^${{ matrix.infra-dir }}/"; then
+              echo "has-changes=true" >> $GITHUB_OUTPUT
+            else
+              echo "has-changes=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Download Plan Artifact

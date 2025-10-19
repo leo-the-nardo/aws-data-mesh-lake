@@ -73,4 +73,3 @@ venv.bak/
 .env
 .env.local
 .env.*.local
-.github*
