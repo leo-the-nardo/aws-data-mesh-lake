@@ -92,3 +92,5 @@ This module was extracted from the main infrastructure module to provide better 
 - Better resource organization
 - Reduced blast radius for network changes
 - Clearer separation of concerns
+
+trigger ci
