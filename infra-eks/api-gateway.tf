@@ -24,7 +24,7 @@ resource "aws_apigatewayv2_vpc_link" "nlb_vpc_link" {
   count              = var.enable_api_gateway ? 1 : 0
   name               = "${var.cluster_name}-nlb-vpc-link"
   security_group_ids = [aws_security_group.api_gateway_vpc_link.id]
-  subnet_ids         = module.vpc.private_subnets
+  subnet_ids         = data.terraform_remote_state.network.outputs.private_subnets
   tags = merge(var.tags, {
     Name = "${var.cluster_name}-nlb-vpc-link"
   })

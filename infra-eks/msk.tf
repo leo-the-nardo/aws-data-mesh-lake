@@ -3,11 +3,11 @@ resource "aws_msk_cluster" "main" {
   count                 = var.enable_msk ? 1 : 0
   cluster_name           = var.msk_cluster_name
   kafka_version          = var.kafka_version
-  number_of_broker_nodes = length(module.vpc.private_subnets)
+  number_of_broker_nodes = length(data.terraform_remote_state.network.outputs.private_subnets)
 
   broker_node_group_info {
     instance_type   = var.msk_instance_type
-    client_subnets  = module.vpc.private_subnets
+    client_subnets  = data.terraform_remote_state.network.outputs.private_subnets
     security_groups = [aws_security_group.msk[0].id]
 
     storage_info {

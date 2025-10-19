@@ -1,42 +1,4 @@
 # VPC using terraform-aws-modules/vpc/aws
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.0"
-  
-  name = "${var.cluster_name}-vpc"
-  cidr = "10.0.0.0/16"
-  
-  azs = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
-  
-  # Public subnets for NAT Gateway and Load Balancers
-  public_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  
-  # Private subnets for EKS nodes
-  private_subnets = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
-  
-  # Enable NAT Gateway for private subnets
-  enable_nat_gateway = true
-  single_nat_gateway = true
-  
-  # Enable DNS resolution and hostnames
-  enable_dns_hostnames = true
-  enable_dns_support = true
-  
-  tags = merge(var.tags, {
-    Name = "${var.cluster_name}-vpc"
-  })
-
-  # Tags for AWS Load Balancer Controller subnet discovery
-  public_subnet_tags = merge(var.tags, {
-    "kubernetes.io/role/elb" = "1"
-    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
-  })
-
-  private_subnet_tags = merge(var.tags, {
-    "kubernetes.io/role/internal-elb" = "1"
-    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
-  })
-}
 
 # EKS Cluster using terraform-aws-modules/eks/aws
 module "eks" {
@@ -44,8 +6,8 @@ module "eks" {
   version = "~> 21.3.1"
   name  = var.cluster_name
   kubernetes_version = var.kubernetes_version
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  vpc_id     = data.terraform_remote_state.network.outputs.vpc_id
+  subnet_ids = data.terraform_remote_state.network.outputs.private_subnets
   upgrade_policy = {
     support_type = "STANDARD"
   }
@@ -55,7 +17,7 @@ module "eks" {
   # Fargate profiles with dynamic private subnet IDs
   fargate_profiles = {
     for k, v in var.fargate_profiles : k => merge(v, {
-      subnet_ids = module.vpc.private_subnets
+      subnet_ids = data.terraform_remote_state.network.outputs.private_subnets
     })
   }
 
@@ -68,7 +30,7 @@ module "eks" {
       min_size = 1
       max_size = 3
       desired_size = 2
-      subnet_ids = module.vpc.private_subnets
+      subnet_ids = data.terraform_remote_state.network.outputs.private_subnets
 
       # Disk configuration to fix image filesystem capacity issue
       disk_size = 50

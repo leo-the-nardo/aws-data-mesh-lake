@@ -25,7 +25,7 @@ module "eks_blueprints_addons" {
       },
       {
         name  = "vpcId"
-        value = module.vpc.vpc_id
+        value = data.terraform_remote_state.network.outputs.vpc_id
       }
     ]
   }

@@ -60,7 +60,7 @@ output "msk_zookeeper_connect_string" {
 
 output "private_subnet_ids" {
   description = "Private subnet IDs for NLB service"
-  value       = module.vpc.private_subnets
+  value       = data.terraform_remote_state.network.outputs.private_subnets
 }
 
 # API Gateway v2 outputs

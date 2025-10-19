@@ -1,0 +1,40 @@
+# Network Configuration Example
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# VPC Configuration
+vpc_name = "main-vpc"
+vpc_cidr = "10.0.0.0/16"
+
+# Availability Zones (cost optimization: use 2 instead of 3)
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+# Subnet Configuration
+private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24"]
+
+# Gateway Configuration - Cost Optimized
+enable_nat_gateway     = true
+single_nat_gateway     = true   # Use single NAT Gateway (saves ~$45/month)
+one_nat_gateway_per_az = false  # Disable per-AZ NAT Gateways
+enable_nat_instance    = false  # Use NAT Gateway (more reliable)
+nat_instance_type      = "t3.nano"
+enable_vpn_gateway     = false
+enable_flow_logs       = false  # Disable for cost savings
+
+# EKS Cluster Name (used for subnet tags)
+cluster_name = "my-eks-cluster"
+
+# Environment
+environment = "dev"
+project_name = "data-eng-aws"
+
+# Tags
+tags = {
+  Environment = "dev"
+  Project     = "data-eng-aws"
+  Module      = "network"
+  Owner       = "data-team"
+  CostCenter  = "engineering"
+}
