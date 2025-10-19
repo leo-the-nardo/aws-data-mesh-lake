@@ -30,7 +30,6 @@ cd infra-state-resources
 terraform init && terraform apply
 terraform output github_actions_role_arn  # Copy to GitHub Secrets as AWS_ROLE_ARN
 
-# Deploy via GitHub UI: Actions → "Deploy Infrastructure" → Run workflow
 ```
 
 ### EKS Access

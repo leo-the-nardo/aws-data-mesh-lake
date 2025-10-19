@@ -18,7 +18,7 @@ on:
         description: 'Terraform version'
         required: false
         type: string
-        default: '1.13.4'
+        default: '1.9.8'
     secrets:
       aws_role_arn:
         required: true
