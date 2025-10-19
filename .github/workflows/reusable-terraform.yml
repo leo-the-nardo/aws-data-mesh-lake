@@ -36,10 +36,22 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has-changes: ${{ steps.plan.outputs.has-changes }}
+      is-destroy: ${{ steps.check-destroy.outputs.is-destroy }}
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check for .destroy file
+        id: check-destroy
+        run: |
+          if [ -f "${{ inputs.terraform_directory }}/.destroy" ]; then
+            echo "is-destroy=true" >> $GITHUB_OUTPUT
+            echo "🔴 .destroy file found - will plan DESTROY"
+          else
+            echo "is-destroy=false" >> $GITHUB_OUTPUT
+            echo "✅ No .destroy file - will plan APPLY"
+          fi
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -65,10 +77,22 @@ jobs:
         id: plan
         run: |
           set +e
-          terraform plan \
-            -var-file="variables/${{ inputs.environment }}.tfvars" \
-            -out=tfplan \
-            -detailed-exitcode
+          
+          if [ "${{ steps.check-destroy.outputs.is-destroy }}" = "true" ]; then
+            echo "Planning DESTROY..."
+            terraform plan \
+              -destroy \
+              -var-file="variables/${{ inputs.environment }}.tfvars" \
+              -out=tfplan \
+              -detailed-exitcode
+          else
+            echo "Planning APPLY..."
+            terraform plan \
+              -var-file="variables/${{ inputs.environment }}.tfvars" \
+              -out=tfplan \
+              -detailed-exitcode
+          fi
+          
           EXIT_CODE=$?
           set -e
           
@@ -84,10 +108,17 @@ jobs:
           fi
         working-directory: ${{ inputs.terraform_directory }}
 
+      - name: Upload Plan
+        if: steps.plan.outputs.has-changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ inputs.environment }}-${{ inputs.terraform_directory }}
+          path: ${{ inputs.terraform_directory }}/tfplan
+          retention-days: 5
 
   # This job only runs if there are changes and environment protection is configured
   approval-gate:
-    name: Approval Required
+    name: ${{ needs.terraform-plan.outputs.is-destroy == 'true' && 'Approval Required (DESTROY)' || 'Approval Required' }}
     runs-on: ubuntu-latest
     needs: terraform-plan
     if: needs.terraform-plan.outputs.has-changes == 'true'
@@ -97,12 +128,13 @@ jobs:
     steps:
       - name: Approval Received
         run: |
-          echo "✅ Deployment approved for ${{ inputs.environment }}"
+          ACTION="${{ needs.terraform-plan.outputs.is-destroy == 'true' && '🔴 DESTROY' || '✅ APPLY' }}"
+          echo "$ACTION approved for ${{ inputs.environment }}"
           echo "📁 Directory: ${{ inputs.terraform_directory }}"
           echo "👤 Approved by: ${{ github.actor }}"
 
   terraform-apply:
-    name: Terraform Apply (${{ inputs.terraform_directory }})
+    name: ${{ needs.terraform-plan.outputs.is-destroy == 'true' && 'Terraform Destroy' || 'Terraform Apply' }} (${{ inputs.terraform_directory }})
     runs-on: ubuntu-latest
     needs: [terraform-plan, approval-gate]
     if: needs.terraform-plan.outputs.has-changes == 'true'
@@ -123,21 +155,46 @@ jobs:
           aws-region: ${{ secrets.aws_region || 'us-east-1' }}
           role-session-name: gh-actions-${{ inputs.environment }}
 
-
       - name: Terraform Init
         run: terraform init
         working-directory: ${{ inputs.terraform_directory }}
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+      - name: Download Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.environment }}-${{ inputs.terraform_directory }}
+          path: ${{ inputs.terraform_directory }}/
+
+      - name: Terraform Apply/Destroy
+        run: |
+          if [ "${{ needs.terraform-plan.outputs.is-destroy }}" = "true" ]; then
+            echo "🔴 Executing DESTROY..."
+            terraform apply -auto-approve tfplan
+          else
+            echo "✅ Executing APPLY..."
+            terraform apply -auto-approve tfplan
+          fi
         working-directory: ${{ inputs.terraform_directory }}
+
+      - name: Remove .destroy file after destroy
+        if: needs.terraform-plan.outputs.is-destroy == 'true'
+        run: |
+          rm -f "${{ inputs.terraform_directory }}/.destroy"
+          echo "✅ Removed .destroy file. Infrastructure will be recreated on next run."
 
       - name: Summary
         run: |
-          echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.terraform-plan.outputs.is-destroy }}" = "true" ]; then
+            echo "### 🔴 Destroy Successful" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Action**: DESTROY" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ Deployment Successful" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Action**: APPLY" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "- **Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Directory**: ${{ inputs.terraform_directory }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deployed by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Executed by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
