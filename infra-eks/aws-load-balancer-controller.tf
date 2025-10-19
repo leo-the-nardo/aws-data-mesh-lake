@@ -1,5 +1,7 @@
 # AWS Load Balancer Controller using EKS Blueprints Add-ons Module
 module "eks_blueprints_addons" {
+  count = var.deploy_helm_addons ? 1 : 0
+  
   source = "aws-ia/eks-blueprints-addons/aws"
   version = "~> 1.22"
 

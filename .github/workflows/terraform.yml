@@ -36,10 +36,17 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: Configure kubectl for EKS
+      - name: Check if EKS cluster exists
         if: matrix.infra-dir == 'infra-eks'
+        id: check-eks
         run: |
-          aws eks update-kubeconfig --name dev-eks-cluster --region ${{ env.AWS_REGION }} || echo "EKS cluster not found or not accessible yet"
+          if aws eks describe-cluster --name dev-eks-cluster --region ${{ env.AWS_REGION }} 2>/dev/null; then
+            echo "cluster_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ EKS cluster exists"
+          else
+            echo "cluster_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ EKS cluster does not exist yet"
+          fi
 
       - name: Terraform Init
         run: terraform init
@@ -51,7 +58,15 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -no-color -var-file="variables/dev.tfvars"
+        run: |
+          if [ "${{ matrix.infra-dir }}" = "infra-eks" ]; then
+            # Auto-detect: disable Helm if cluster doesn't exist
+            DEPLOY_HELM="${{ steps.check-eks.outputs.cluster_exists }}"
+            echo "🎯 Planning EKS with deploy_helm_addons=${DEPLOY_HELM}"
+            terraform plan -no-color -var-file="variables/dev.tfvars" -var="deploy_helm_addons=${DEPLOY_HELM}"
+          else
+            terraform plan -no-color -var-file="variables/dev.tfvars"
+          fi
         working-directory: ./${{ matrix.infra-dir }}
 
   manual-approval:
@@ -118,10 +133,17 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: Configure kubectl for EKS
+      - name: Check if EKS cluster exists
         if: matrix.infra-dir == 'infra-eks'
+        id: check-eks-apply
         run: |
-          aws eks update-kubeconfig --name dev-eks-cluster --region ${{ env.AWS_REGION }} || echo "EKS cluster not found or not accessible yet"
+          if aws eks describe-cluster --name dev-eks-cluster --region ${{ env.AWS_REGION }} 2>/dev/null; then
+            echo "cluster_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ EKS cluster exists"
+          else
+            echo "cluster_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ EKS cluster does not exist yet"
+          fi
 
       - name: Terraform Init
         run: terraform init
@@ -129,7 +151,15 @@ jobs:
 
       - name: Terraform Apply
         id: apply
-        run: terraform apply -auto-approve -var-file="variables/dev.tfvars"
+        run: |
+          if [ "${{ matrix.infra-dir }}" = "infra-eks" ]; then
+            # Auto-detect: disable Helm if cluster doesn't exist
+            DEPLOY_HELM="${{ steps.check-eks-apply.outputs.cluster_exists }}"
+            echo "🎯 Applying EKS with deploy_helm_addons=${DEPLOY_HELM}"
+            terraform apply -auto-approve -var-file="variables/dev.tfvars" -var="deploy_helm_addons=${DEPLOY_HELM}"
+          else
+            terraform apply -auto-approve -var-file="variables/dev.tfvars"
+          fi
         working-directory: ./${{ matrix.infra-dir }}
 
       - name: Output Terraform Results

@@ -1,6 +1,8 @@
 # External Secrets Operator Installation via Helm
 
 resource "helm_release" "external_secrets" {
+  count = var.deploy_helm_addons ? 1 : 0
+  
   name       = "external-secrets"
   repository = "https://charts.external-secrets.io"
   chart      = "external-secrets"
