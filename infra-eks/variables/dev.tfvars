@@ -13,7 +13,19 @@ fargate_profiles = {
     name = "main"
     selectors = [
       {
+        namespace = "kube-system"
+      },
+      {
         namespace = "default"
+      },
+      {
+        namespace = "faxineiro"
+      },
+      {
+        namespace = "monitoring"
+      },
+      {
+        namespace = "ingress-nginx"
       }
     ]
   }

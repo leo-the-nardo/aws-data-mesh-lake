@@ -28,6 +28,18 @@ variable "state_lock_table_name" {
   default     = "terraform-state-lock"
 }
 
+variable "github_owner" {
+  description = "GitHub repository owner (username or organization)"
+  type        = string
+  default     = "leo-the-nardo"
+}
+
+variable "github_repo" {
+  description = "GitHub repository name"
+  type        = string
+  default     = "aws-data-mesh-lake"
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
