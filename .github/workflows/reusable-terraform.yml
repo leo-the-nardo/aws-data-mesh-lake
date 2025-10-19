@@ -96,14 +96,19 @@ jobs:
           EXIT_CODE=$?
           set -e
           
+          echo "🔍 Terraform exit code: $EXIT_CODE"
+          
           # Exit codes: 0=no changes, 1=error, 2=changes
           if [ $EXIT_CODE -eq 2 ]; then
+            echo "✅ Changes detected! Setting has-changes=true"
             echo "has-changes=true" >> $GITHUB_OUTPUT
           else
+            echo "ℹ️  No changes detected. Setting has-changes=false"
             echo "has-changes=false" >> $GITHUB_OUTPUT
           fi
           
           if [ $EXIT_CODE -eq 1 ]; then
+            echo "❌ Terraform plan failed!"
             exit 1
           fi
         working-directory: ${{ inputs.terraform_directory }}
@@ -117,8 +122,6 @@ jobs:
           retention-days: 5
 
   # This job waits for approval if environment has protection rules
-  # For 'dev' without protection rules, this runs immediately (no approval needed)
-  # For 'production' with protection rules, this waits for manual approval
   approval-gate:
     name: ${{ needs.terraform-plan.outputs.is-destroy == 'true' && 'Approval (DESTROY)' || 'Approval' }}
     runs-on: ubuntu-latest
@@ -130,13 +133,13 @@ jobs:
     steps:
       - name: Approval Checkpoint
         run: |
+          echo "🔍 Debug: has-changes = ${{ needs.terraform-plan.outputs.has-changes }}"
+          echo "🔍 Debug: is-destroy = ${{ needs.terraform-plan.outputs.is-destroy }}"
+          
           ACTION="${{ needs.terraform-plan.outputs.is-destroy == 'true' && '🔴 DESTROY' || '✅ APPLY' }}"
           echo "$ACTION approved for ${{ inputs.environment }}"
           echo "📁 Directory: ${{ inputs.terraform_directory }}"
           echo "👤 Approved by: ${{ github.actor }}"
-          echo ""
-          echo "ℹ️  If this ran immediately, the environment has no protection rules."
-          echo "ℹ️  Add required reviewers in: Settings → Environments → ${{ inputs.environment }}"
 
   terraform-apply:
     name: ${{ needs.terraform-plan.outputs.is-destroy == 'true' && 'Terraform Destroy' || 'Terraform Apply' }} (${{ inputs.terraform_directory }})
