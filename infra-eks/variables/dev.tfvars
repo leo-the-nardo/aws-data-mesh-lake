@@ -6,7 +6,6 @@ aws_region = "us-east-1"
 # EKS Configuration
 cluster_name      = "dev-eks-cluster"
 kubernetes_version = "1.33"
-deploy_helm_addons = false  # Automatically controlled by CI/CD, set to true for local deployments to existing clusters
 
 # Fargate Profiles Configuration
 fargate_profiles = {
@@ -20,13 +19,10 @@ fargate_profiles = {
         namespace = "default"
       },
       {
-        namespace = "faxineiro"
+        namespace = "development"
       },
       {
-        namespace = "monitoring"
-      },
-      {
-        namespace = "ingress-nginx"
+        namespace = "external-secrets-system"
       }
     ]
   }

@@ -16,12 +16,6 @@ variable "kubernetes_version" {
   default     = "1.33"
 }
 
-variable "deploy_helm_addons" {
-  description = "Whether to deploy Helm add-ons (set to false during initial cluster creation)"
-  type        = bool
-  default     = true
-}
-
 variable "msk_cluster_name" {
   description = "Name of the MSK cluster"
   type        = string

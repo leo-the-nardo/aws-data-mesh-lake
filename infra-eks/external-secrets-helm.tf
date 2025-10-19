@@ -1,8 +1,6 @@
 # External Secrets Operator Installation via Helm
 
 resource "helm_release" "external_secrets" {
-  count = var.deploy_helm_addons ? 1 : 0
-  
   name       = "external-secrets"
   repository = "https://charts.external-secrets.io"
   chart      = "external-secrets"
@@ -27,6 +25,7 @@ resource "helm_release" "external_secrets" {
     module.eks,
     aws_eks_addon.vpc_cni,
     aws_eks_addon.coredns,
-    aws_eks_addon.kube_proxy
+    aws_eks_addon.kube_proxy,
+    module.eks_blueprints_addons  # Wait for Load Balancer Controller webhook to be ready
   ]
 }

@@ -68,8 +68,17 @@ module "fck_nat" {
   source = "RaJiska/fck-nat/aws"
   version = "1.3.0"
 
-  name          = "${var.vpc_name}-fck-nat"
-  vpc_id        = module.vpc.vpc_id
-  subnet_id     = module.vpc.public_subnets[0]  # Use first public subnet
-  instance_type = var.fck_nat_instance_type
+  name                 = "${var.vpc_name}-fck-nat"
+  vpc_id               = module.vpc.vpc_id
+  subnet_id            = module.vpc.public_subnets[0]  # Use first public subnet
+  instance_type        = var.fck_nat_instance_type
+  
+  # Configure route tables for private subnets to route internet traffic through fck-nat
+  update_route_tables = true
+  route_tables_ids = {
+    "${var.vpc_name}-private" = module.vpc.private_route_table_ids[0]
+  }
+  
+  # Enable HA mode (uses autoscaling group for automatic recovery)
+  ha_mode              = true
 }
