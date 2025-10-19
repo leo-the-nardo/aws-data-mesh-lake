@@ -76,31 +76,40 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
-          set +e
-          
           if [ "${{ steps.check-destroy.outputs.is-destroy }}" = "true" ]; then
             echo "🔴 Planning DESTROY..."
-            terraform plan -destroy -var-file="variables/dev.tfvars" -out=tfplan -detailed-exitcode
-            EXIT_CODE=$?
+            terraform plan -destroy -var-file="variables/dev.tfvars" -out=tfplan -detailed-exitcode > plan_output.txt 2>&1 || EXIT_CODE=$?
           else
             echo "✅ Planning APPLY..."
-            terraform plan -var-file="variables/dev.tfvars" -out=tfplan -detailed-exitcode
-            EXIT_CODE=$?
+            terraform plan -var-file="variables/dev.tfvars" -out=tfplan -detailed-exitcode > plan_output.txt 2>&1 || EXIT_CODE=$?
           fi
           
-          set -e
+          # Show the plan output
+          cat plan_output.txt
           
+          # If EXIT_CODE is not set, command succeeded without changes
+          if [ -z "$EXIT_CODE" ]; then
+            EXIT_CODE=0
+          fi
+          
+          echo ""
           echo "🔍 Terraform exit code: $EXIT_CODE"
           
-          # Exit codes: 0=no changes, 1=error, 2=changes
-          if [ $EXIT_CODE -eq 2 ]; then
-            echo "✅ Changes detected! Setting has-changes=true"
-            echo "has-changes=true" >> $GITHUB_OUTPUT
-          elif [ $EXIT_CODE -eq 0 ]; then
-            echo "ℹ️  No changes detected. Setting has-changes=false"
+          # Parse the plan output to check for changes
+          if grep -q "Plan: 0 to add, 0 to change, 0 to destroy" plan_output.txt; then
+            echo "ℹ️  No changes detected in plan output"
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+          elif grep -q "No changes" plan_output.txt; then
+            echo "ℹ️  No changes detected in plan output"
             echo "has-changes=false" >> $GITHUB_OUTPUT
           else
-            echo "❌ Terraform plan failed with exit code $EXIT_CODE"
+            echo "✅ Changes detected in plan output!"
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # Exit with error if terraform failed
+          if [ $EXIT_CODE -eq 1 ]; then
+            echo "❌ Terraform plan failed!"
             exit 1
           fi
         working-directory: ${{ inputs.terraform_directory }}
