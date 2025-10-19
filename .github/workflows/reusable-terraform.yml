@@ -123,11 +123,7 @@ jobs:
           aws-region: ${{ secrets.aws_region || 'us-east-1' }}
           role-session-name: gh-actions-${{ inputs.environment }}
 
-      - name: Download Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-${{ inputs.environment }}-${{ inputs.terraform_directory }}
-          path: ${{ inputs.terraform_directory }}/
+
 
       - name: Terraform Init
         run: terraform init
