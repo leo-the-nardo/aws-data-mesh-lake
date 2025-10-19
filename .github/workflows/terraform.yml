@@ -14,43 +14,13 @@ env:
   AWS_REGION: 'us-east-1'
 
 jobs:
-  # Detect which directories have changes
-  detect-changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      infra-eks: ${{ steps.filter.outputs.infra-eks }}
-      infra-glue: ${{ steps.filter.outputs.infra-glue }}
-      infra-network: ${{ steps.filter.outputs.infra-network }}
-      infra-state-resources: ${{ steps.filter.outputs.infra-state-resources }}
-      any-changes: ${{ steps.filter.outputs.changes }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check for directory changes
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            infra-eks:
-              - 'infra-eks/**'
-            infra-glue:
-              - 'infra-glue/**'
-            infra-network:
-              - 'infra-network/**'
-            infra-state-resources:
-              - 'infra-state-resources/**'
-
   terraform-plan:
-    name: Terraform Plan
+    name: Terraform Plan - ${{ matrix.infra-dir }}
     runs-on: ubuntu-latest
-    needs: detect-changes
     strategy:
       matrix:
         infra-dir: [infra-eks, infra-glue, infra-network, infra-state-resources]
-    # Only run if this specific directory has changes
-    if: needs.detect-changes.outputs[matrix.infra-dir] == 'true'
+      fail-fast: false  # Continue other jobs even if one fails
     permissions:
       id-token: write
       contents: read
@@ -97,27 +67,24 @@ jobs:
           path: ./${{ matrix.infra-dir }}/tfplan
           retention-days: 5
 
+      - name: Upload Plan Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-output-${{ matrix.infra-dir }}
+          path: ./${{ matrix.infra-dir }}/tfplan.txt
+          retention-days: 5
+
   manual-approval:
     name: Manual Approval
     runs-on: ubuntu-latest
-    needs: [detect-changes, terraform-plan]
-    if: needs.detect-changes.outputs.any-changes == 'true'
+    needs: terraform-plan
     permissions:
       issues: write
       contents: read
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Build changed directories list
-        id: changed-list
-        run: |
-          changed=""
-          [ "${{ needs.detect-changes.outputs.infra-eks }}" == "true" ] && changed="$changed infra-eks"
-          [ "${{ needs.detect-changes.outputs.infra-glue }}" == "true" ] && changed="$changed infra-glue"
-          [ "${{ needs.detect-changes.outputs.infra-network }}" == "true" ] && changed="$changed infra-network"
-          [ "${{ needs.detect-changes.outputs.infra-state-resources }}" == "true" ] && changed="$changed infra-state-resources"
-          echo "directories=$changed" >> $GITHUB_OUTPUT
           
       - name: Await for manual approval
         uses: trstringer/manual-approval@v1
@@ -133,20 +100,24 @@ jobs:
             **Actor:** ${{ github.actor }}
             **Branch:** ${{ github.ref_name }}
             
-            **Changed Infrastructure Directories:** ${{ steps.changed-list.outputs.directories }}
+            **Infrastructure Directories:**
+            - infra-eks
+            - infra-glue
+            - infra-network
+            - infra-state-resources
             
-            The Terraform plan has been generated and is ready for deployment.
+            The Terraform plans have been generated and are ready for deployment.
+            Review the plan artifacts before approving.
           exclude-workflow-initiator-as-approver: false
 
   terraform-apply:
-    name: Terraform Apply
+    name: Terraform Apply - ${{ matrix.infra-dir }}
     runs-on: ubuntu-latest
-    needs: [detect-changes, manual-approval]
+    needs: manual-approval
     strategy:
       matrix:
         infra-dir: [infra-eks, infra-glue, infra-network, infra-state-resources]
-    # Only run if this specific directory has changes
-    if: needs.detect-changes.outputs[matrix.infra-dir] == 'true'
+      fail-fast: false  # Continue other jobs even if one fails
     permissions:
       id-token: write
       contents: read
