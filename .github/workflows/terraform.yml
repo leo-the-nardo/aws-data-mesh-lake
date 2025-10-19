@@ -36,6 +36,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
+      - name: Configure kubectl for EKS
+        if: matrix.infra-dir == 'infra-eks'
+        run: |
+          aws eks update-kubeconfig --name dev-eks-cluster --region ${{ env.AWS_REGION }} || echo "EKS cluster not found or not accessible yet"
+
       - name: Terraform Init
         run: terraform init
         working-directory: ./${{ matrix.infra-dir }}
@@ -112,6 +117,11 @@ jobs:
         with:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Configure kubectl for EKS
+        if: matrix.infra-dir == 'infra-eks'
+        run: |
+          aws eks update-kubeconfig --name dev-eks-cluster --region ${{ env.AWS_REGION }} || echo "EKS cluster not found or not accessible yet"
 
       - name: Terraform Init
         run: terraform init

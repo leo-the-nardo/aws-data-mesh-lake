@@ -12,13 +12,13 @@ github_owner = "leo-the-nardo"
 github_repo = "aws-data-mesh-lake"
 
 # State Resources Configuration
-state_bucket_name = "tfstates-aws-data-mesh-lake"
-state_lock_table_name = "terraform-state-lock-aws-data-mesh-lake"
+state_bucket_name = "tfstates-data-eng-aws"
+state_lock_table_name = "terraform-state-lock-data-eng-aws"
 
 # Tags
 tags = {
   Environment = "dev"
-  Project     = "aws-data-mesh-lake"
+  Project     = "data-eng-aws"
   Module      = "state"
   Owner       = "data-team"
   CostCenter  = "engineering"
