@@ -79,21 +79,15 @@ jobs:
           set +e
           
           if [ "${{ steps.check-destroy.outputs.is-destroy }}" = "true" ]; then
-            echo "Planning DESTROY..."
-            terraform plan \
-              -destroy \
-              -var-file="variables/dev.tfvars" \
-              -out=tfplan \
-              -detailed-exitcode
+            echo "🔴 Planning DESTROY..."
+            terraform plan -destroy -var-file="variables/dev.tfvars" -out=tfplan -detailed-exitcode
+            EXIT_CODE=$?
           else
-            echo "Planning APPLY..."
-            terraform plan \
-              -var-file="variables/dev.tfvars" \
-              -out=tfplan \
-              -detailed-exitcode
+            echo "✅ Planning APPLY..."
+            terraform plan -var-file="variables/dev.tfvars" -out=tfplan -detailed-exitcode
+            EXIT_CODE=$?
           fi
           
-          EXIT_CODE=$?
           set -e
           
           echo "🔍 Terraform exit code: $EXIT_CODE"
@@ -102,13 +96,11 @@ jobs:
           if [ $EXIT_CODE -eq 2 ]; then
             echo "✅ Changes detected! Setting has-changes=true"
             echo "has-changes=true" >> $GITHUB_OUTPUT
-          else
+          elif [ $EXIT_CODE -eq 0 ]; then
             echo "ℹ️  No changes detected. Setting has-changes=false"
             echo "has-changes=false" >> $GITHUB_OUTPUT
-          fi
-          
-          if [ $EXIT_CODE -eq 1 ]; then
-            echo "❌ Terraform plan failed!"
+          else
+            echo "❌ Terraform plan failed with exit code $EXIT_CODE"
             exit 1
           fi
         working-directory: ${{ inputs.terraform_directory }}
