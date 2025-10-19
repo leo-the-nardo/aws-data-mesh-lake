@@ -1,0 +1,104 @@
+name: Deploy Infrastructure
+
+# Cost-effective deployment with approval gates that DON'T consume runner minutes
+# Workflow pauses between jobs while waiting for approval = ZERO runner costs during approval
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      components:
+        description: 'Components to deploy (comma-separated: network,glue,eks or "all")'
+        required: true
+        default: 'all'
+  
+  push:
+    branches: [main]
+    paths:
+      - 'infra-**/**'
+      - '.github/workflows/**'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Network Infrastructure
+  deploy-network:
+    name: Network
+    if: github.event_name == 'push' || contains(inputs.components, 'network') || inputs.components == 'all'
+    uses: ./.github/workflows/reusable-terraform.yml
+    with:
+      terraform_directory: infra-network
+      environment: ${{ inputs.environment || 'dev' }}
+      terraform_version: '1.5.0'
+    secrets:
+      aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+      aws_region: 'us-east-1'
+
+  # Glue Infrastructure (depends on network)
+  deploy-glue:
+    name: Glue
+    needs: deploy-network
+    if: |
+      always() && 
+      (github.event_name == 'push' || contains(inputs.components, 'glue') || inputs.components == 'all') &&
+      (needs.deploy-network.result == 'success' || needs.deploy-network.result == 'skipped')
+    uses: ./.github/workflows/reusable-terraform.yml
+    with:
+      terraform_directory: infra-glue
+      environment: ${{ inputs.environment || 'dev' }}
+      terraform_version: '1.5.0'
+    secrets:
+      aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+      aws_region: 'us-east-1'
+
+  # EKS Infrastructure (depends on network)
+  deploy-eks:
+    name: EKS
+    needs: deploy-network
+    if: |
+      always() && 
+      (github.event_name == 'push' || contains(inputs.components, 'eks') || inputs.components == 'all') &&
+      (needs.deploy-network.result == 'success' || needs.deploy-network.result == 'skipped')
+    uses: ./.github/workflows/reusable-terraform.yml
+    with:
+      terraform_directory: infra-eks
+      environment: ${{ inputs.environment || 'dev' }}
+      terraform_version: '1.5.0'
+    secrets:
+      aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+      aws_region: 'us-east-1'
+
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-network, deploy-glue, deploy-eks]
+    if: always()
+    
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# 🚀 Infrastructure Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ inputs.environment || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Components**: ${{ inputs.components || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Actor**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Network | ${{ needs.deploy-network.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Glue | ${{ needs.deploy-glue.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| EKS | ${{ needs.deploy-eks.result }} |" >> $GITHUB_STEP_SUMMARY
+
