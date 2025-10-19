@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faxineiro
+  namespace: default
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: faxineiro
+  template:
+    metadata:
+      labels:
+        app: faxineiro
+    spec:
+      containers:
+        - name: faxineiro
+          image: leoff00/coitadobot:latest
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "400m"
+      envfrom:
+        - secretRef:
+            name: faxineiro-secrets
