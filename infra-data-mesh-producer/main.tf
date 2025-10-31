@@ -2,7 +2,7 @@ terraform {
   required_version = ">= 1.0"
   backend "s3" {
     bucket         = "tfstates-data-eng-aws"
-    key            = "infra-glue/terraform.tfstate"
+    key            = "infra-data-mesh-producer/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "terraform-state-lock-data-eng-aws"
     encrypt        = true

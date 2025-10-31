@@ -56,7 +56,7 @@ jobs:
       (needs.deploy-network.result == 'success' || needs.deploy-network.result == 'skipped')
     uses: ./.github/workflows/reusable-terraform.yml
     with:
-      terraform_directory: infra-glue
+      terraform_directory: infra-data-mesh-producer
       environment: ${{ inputs.environment || 'development' }}
       terraform_version: ${{ inputs.terraform_version }}
     secrets:
