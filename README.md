@@ -1,6 +1,5 @@
-# AWS Data Engineering Infrastructure
-
-Infrastructure as Code for AWS data engineering platform using Terraform and Kubernetes.
+# Data Mesh on AWS - Reference Architecture
+<img alt="aws-data-mesh-reference-arch" src="https://github.com/user-attachments/assets/64f353e0-fe5a-4d90-9744-9d8d7d630b02" />
 
 ## Project Structure
 
