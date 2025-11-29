@@ -1,5 +1,6 @@
 # Data Mesh on AWS - Reference Architecture
-<img alt="aws-data-mesh-reference-arch" src="https://github.com/user-attachments/assets/64f353e0-fe5a-4d90-9744-9d8d7d630b02" />
+<img width="2591" height="6279" alt="aws-data-mesh-reference" src="https://github.com/user-attachments/assets/dc5826f6-042d-46a7-81a7-3f6e4a5fbf3c" />
+
 
 ## Project Structure
 
